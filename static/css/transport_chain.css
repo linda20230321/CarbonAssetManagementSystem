@@ -1,0 +1,40 @@
+/* static/css/transport_chain.css - 补充样式 */
+.transport-chain-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    gap: 16px;
+    padding: 0;
+    background: #f5f7fa;
+}
+
+/* 卡片阴影 */
+.comparison-card {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    transition: box-shadow 0.2s;
+}
+.comparison-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+
+/* 数值动画 */
+.stat-value.highlight {
+    transition: color 0.3s;
+}
+
+/* 响应式优化 */
+@media (max-width: 768px) {
+    .transport-chain-container {
+        padding: 8px;
+    }
+    .tab-item {
+        padding: 8px 16px;
+        font-size: 13px;
+    }
+    .query-row {
+        gap: 8px;
+    }
+    .query-item {
+        min-width: 80px;
+    }
+}

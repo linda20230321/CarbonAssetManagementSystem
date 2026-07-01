@@ -1,0 +1,433 @@
+<!-- templates/reduction_measure.html -->
+{% extends "base.html" %}
+
+{% block page_title %}碳减排措施{% endblock %}
+
+{% block content %}
+<style>
+    .measure-card {
+        background: white;
+        border-radius: 10px;
+        padding: 16px 20px;
+        border: 1px solid #e8edf2;
+        margin-bottom: 12px;
+        transition: box-shadow 0.2s;
+    }
+    .measure-card:hover {
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+    .measure-card .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .measure-card .header .name {
+        font-size: 15px;
+        font-weight: bold;
+        color: #2c3e50;
+    }
+    .measure-card .header .type-badge {
+        padding: 2px 12px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 500;
+    }
+    .type-badge.energy { background: #e8f4fd; color: #2980b9; }
+    .type-badge.replace { background: #fef3e2; color: #d68910; }
+    .type-badge.renewable { background: #d4edda; color: #1e8449; }
+    .measure-card .details {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid #f0f0f0;
+    }
+    .measure-card .details .item {
+        text-align: center;
+    }
+    .measure-card .details .item .value {
+        font-size: 16px;
+        font-weight: bold;
+        color: #2c3e50;
+    }
+    .measure-card .details .item .label {
+        font-size: 11px;
+        color: #7f8c8d;
+    }
+    .measure-card .footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 10px;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    .measure-card .footer .feasibility {
+        font-size: 12px;
+        padding: 2px 12px;
+        border-radius: 12px;
+    }
+    .feasibility.high { background: #d4edda; color: #1e8449; }
+    .feasibility.medium { background: #fef3e2; color: #d68910; }
+    .feasibility.low { background: #f8d7da; color: #922b21; }
+    .measure-card .actions {
+        display: flex;
+        gap: 4px;
+    }
+    .measure-card .actions button {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 14px;
+        padding: 2px 6px;
+        border-radius: 3px;
+    }
+    .measure-card .actions .btn-edit { color: #3498db; }
+    .measure-card .actions .btn-edit:hover { background: #e8f4fd; }
+    .measure-card .actions .btn-delete { color: #e74c3c; }
+    .measure-card .actions .btn-delete:hover { background: #fde8e8; }
+    .measure-card .status-badge {
+        padding: 2px 12px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 500;
+    }
+    .status-badge.planning { background: #e8edf2; color: #5d6d7e; }
+    .status-badge.ongoing { background: #fef3e2; color: #d68910; }
+    .status-badge.completed { background: #d4edda; color: #1e8449; }
+    @media (max-width: 768px) {
+        .measure-card .details {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+</style>
+
+<div class="page-container" style="height:100%; display:flex; flex-direction:column;">
+
+    <!-- 统计 -->
+    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px;">
+        <div style="background:white; border-radius:8px; padding:12px 16px; border:1px solid #e8edf2; text-align:center;">
+            <div style="font-size:22px; font-weight:bold; color:#3498db;" id="totalMeasures">0</div>
+            <div style="font-size:11px; color:#7f8c8d;">总措施</div>
+        </div>
+        <div style="background:white; border-radius:8px; padding:12px 16px; border:1px solid #e8edf2; text-align:center;">
+            <div style="font-size:22px; font-weight:bold; color:#2ecc71;" id="completedMeasures">0</div>
+            <div style="font-size:11px; color:#7f8c8d;">已完成</div>
+        </div>
+        <div style="background:white; border-radius:8px; padding:12px 16px; border:1px solid #e8edf2; text-align:center;">
+            <div style="font-size:22px; font-weight:bold; color:#f39c12;" id="ongoingMeasures">0</div>
+            <div style="font-size:11px; color:#7f8c8d;">进行中</div>
+        </div>
+        <div style="background:white; border-radius:8px; padding:12px 16px; border:1px solid #e8edf2; text-align:center;">
+            <div style="font-size:22px; font-weight:bold; color:#27ae60;" id="totalReduction">0</div>
+            <div style="font-size:11px; color:#7f8c8d;">总减排量(tCO₂e)</div>
+        </div>
+    </div>
+
+    <!-- 工具栏 -->
+    <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom:10px; border-bottom:1px solid #e1e8ed; flex-shrink:0; flex-wrap:wrap; gap:6px;">
+        <span style="font-size:13px; font-weight:bold;">🔧 碳减排措施列表</span>
+        <div style="display:flex; gap:6px;">
+            <button class="btn btn-primary btn-sm" onclick="openMeasureModal()" style="font-size:10px; padding:4px 14px; border:none; border-radius:3px; cursor:pointer; background:#3498db; color:white;">➕ 新增措施</button>
+            <button class="btn btn-sm btn-outline" onclick="loadMeasures()" style="font-size:10px; padding:4px 10px; border:1px solid #d0d7de; border-radius:3px; cursor:pointer; background:transparent;">🔄 刷新</button>
+        </div>
+    </div>
+
+    <!-- 措施列表 -->
+    <div style="flex:1; overflow:auto; padding-top:12px;" id="measureList">
+        <div style="text-align:center; color:#95a5a6; padding:40px 0; font-size:13px;">
+            ⏳ 加载措施列表中...
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- 弹窗: 新增/编辑措施 -->
+<!-- ============================================================ -->
+<div class="modal" id="measureModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; z-index:10000; justify-content:center; align-items:flex-start; padding-top:30px;">
+    <div class="modal-overlay" onclick="closeMeasureModal()" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9999;"></div>
+    <div class="modal-dialog" style="max-width:550px; width:95%; margin:0 auto; background:white; border-radius:8px; box-shadow:0 4px 30px rgba(0,0,0,0.3); position:relative; z-index:10001; max-height:90vh; display:flex; flex-direction:column;">
+        <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; padding:14px 20px; border-bottom:1px solid #e1e8ed; background:#f8f9fa; border-radius:8px 8px 0 0; flex-shrink:0;">
+            <h3 id="measureModalTitle" style="margin:0; font-size:16px;">新增碳减排措施</h3>
+            <button class="modal-close" onclick="closeMeasureModal()" style="background:none; border:none; font-size:24px; cursor:pointer; color:#95a5a6; padding:0 8px;">&times;</button>
+        </div>
+        <div class="modal-body" style="padding:20px; overflow-y:auto; flex:1;">
+            <form id="measureForm" onsubmit="return false;">
+                <input type="hidden" id="editMeasureId" value="">
+
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label style="display:block; font-size:12px; font-weight:600; margin-bottom:3px; color:#2c3e50;">措施名称 <span style="color:#e74c3c;">*</span></label>
+                    <input type="text" id="measureName" class="form-control" placeholder="如：节能灯更换" style="width:100%; padding:6px 10px; border:1px solid #d0d7de; border-radius:4px; font-size:12px; box-sizing:border-box;">
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label style="display:block; font-size:12px; font-weight:600; margin-bottom:3px; color:#2c3e50;">措施类型</label>
+                        <select id="measureType" class="form-control" style="width:100%; padding:6px 10px; border:1px solid #d0d7de; border-radius:4px; font-size:12px; box-sizing:border-box;">
+                            <option value="能效提升">能效提升</option>
+                            <option value="能源替代">能源替代</option>
+                            <option value="可再生能源">可再生能源</option>
+                            <option value="工艺优化">工艺优化</option>
+                            <option value="其他">其他</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label style="display:block; font-size:12px; font-weight:600; margin-bottom:3px; color:#2c3e50;">分类</label>
+                        <input type="text" id="measureCategory" class="form-control" placeholder="如：非牵引" style="width:100%; padding:6px 10px; border:1px solid #d0d7de; border-radius:4px; font-size:12px; box-sizing:border-box;">
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label style="display:block; font-size:12px; font-weight:600; margin-bottom:3px; color:#2c3e50;">预计减排量 (tCO₂e)</label>
+                        <input type="number" id="measureReduction" class="form-control" value="136.96" style="width:100%; padding:6px 10px; border:1px solid #d0d7de; border-radius:4px; font-size:12px; box-sizing:border-box;">
+                    </div>
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label style="display:block; font-size:12px; font-weight:600; margin-bottom:3px; color:#2c3e50;">预计成本 (万元)</label>
+                        <input type="number" id="measureCost" class="form-control" value="4" style="width:100%; padding:6px 10px; border:1px solid #d0d7de; border-radius:4px; font-size:12px; box-sizing:border-box;">
+                    </div>
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label style="display:block; font-size:12px; font-weight:600; margin-bottom:3px; color:#2c3e50;">预计年收益 (万元/年)</label>
+                        <input type="number" id="measureBenefit" class="form-control" value="4" style="width:100%; padding:6px 10px; border:1px solid #d0d7de; border-radius:4px; font-size:12px; box-sizing:border-box;">
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label style="display:block; font-size:12px; font-weight:600; margin-bottom:3px; color:#2c3e50;">可行性</label>
+                        <select id="measureFeasibility" class="form-control" style="width:100%; padding:6px 10px; border:1px solid #d0d7de; border-radius:4px; font-size:12px; box-sizing:border-box;">
+                            <option value="高">高</option>
+                            <option value="中" selected>中</option>
+                            <option value="低">低</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label style="display:block; font-size:12px; font-weight:600; margin-bottom:3px; color:#2c3e50;">状态</label>
+                        <select id="measureStatus" class="form-control" style="width:100%; padding:6px 10px; border:1px solid #d0d7de; border-radius:4px; font-size:12px; box-sizing:border-box;">
+                            <option value="规划中">规划中</option>
+                            <option value="进行中">进行中</option>
+                            <option value="已实施">已实施</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label style="display:block; font-size:12px; font-weight:600; margin-bottom:3px; color:#2c3e50;">实施日期</label>
+                        <input type="date" id="measureDate" class="form-control" style="width:100%; padding:6px 10px; border:1px solid #d0d7de; border-radius:4px; font-size:12px; box-sizing:border-box;">
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label style="display:block; font-size:12px; font-weight:600; margin-bottom:3px; color:#2c3e50;">描述</label>
+                    <textarea id="measureDesc" class="form-control" rows="2" placeholder="措施详细描述..." style="width:100%; padding:6px 10px; border:1px solid #d0d7de; border-radius:4px; font-size:12px; box-sizing:border-box; resize:vertical;"></textarea>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:8px; padding:12px 20px; border-top:1px solid #e1e8ed; background:#f8f9fa; border-radius:0 0 8px 8px; flex-shrink:0;">
+            <button class="btn btn-secondary" onclick="closeMeasureModal()" style="padding:6px 20px; border:none; border-radius:4px; cursor:pointer; background:#95a5a6; color:white;">取消</button>
+            <button class="btn btn-primary" onclick="saveMeasure()" style="padding:6px 20px; border:none; border-radius:4px; cursor:pointer; background:#3498db; color:white;">保存</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function loadMeasures() {
+        var area = document.getElementById('measureList');
+        area.innerHTML = '<div style="text-align:center; color:#95a5a6; padding:40px 0; font-size:13px;">⏳ 加载中...</div>';
+
+        fetch('/api/reduction/measures')
+        .then(function(response) { return response.json(); })
+        .then(function(result) {
+            if (!result.success) {
+                area.innerHTML = '<div style="text-align:center; color:#e74c3c; padding:20px; font-size:13px;">❌ ' + (result.error || '加载失败') + '</div>';
+                return;
+            }
+
+            var data = result.data || [];
+            var total = data.length;
+            var completed = data.filter(function(m) { return m.status === '已实施'; }).length;
+            var ongoing = data.filter(function(m) { return m.status === '进行中'; }).length;
+            var totalReduction = data.reduce(function(sum, m) { return sum + (m.estimated_reduction || 0); }, 0);
+
+            document.getElementById('totalMeasures').textContent = total;
+            document.getElementById('completedMeasures').textContent = completed;
+            document.getElementById('ongoingMeasures').textContent = ongoing;
+            document.getElementById('totalReduction').textContent = totalReduction.toFixed(0);
+
+            area.innerHTML = '';
+            if (data.length === 0) {
+                area.innerHTML = '<div style="text-align:center; color:#95a5a6; padding:40px 0; font-size:13px;">📌 暂无碳减排措施，点击"新增措施"添加</div>';
+                return;
+            }
+
+            data.forEach(function(measure) {
+                var typeClass = measure.measure_type === '能效提升' ? 'energy' : measure.measure_type === '能源替代' ? 'replace' : 'renewable';
+                var statusClass = measure.status === '规划中' ? 'planning' : measure.status === '进行中' ? 'ongoing' : 'completed';
+                var feasibilityClass = measure.feasibility === '高' ? 'high' : measure.feasibility === '中' ? 'medium' : 'low';
+
+                var card = document.createElement('div');
+                card.className = 'measure-card';
+                card.innerHTML = `
+                    <div class="header">
+                        <span class="name">${measure.measure_name || '未命名措施'}</span>
+                        <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                            <span class="type-badge ${typeClass}">${measure.measure_type || '能效提升'}</span>
+                            <span class="status-badge ${statusClass}">${measure.status || '规划中'}</span>
+                            <span class="feasibility ${feasibilityClass}">可行性: ${measure.feasibility || '中'}</span>
+                        </div>
+                    </div>
+                    <div class="details">
+                        <div class="item">
+                            <div class="value" style="color:#e74c3c;">${(measure.estimated_reduction || 0).toFixed(0)}</div>
+                            <div class="label">预计减排量 (tCO₂e)</div>
+                        </div>
+                        <div class="item">
+                            <div class="value" style="color:#f39c12;">${(measure.estimated_cost || 0).toFixed(0)}</div>
+                            <div class="label">预计成本 (万元)</div>
+                        </div>
+                        <div class="item">
+                            <div class="value" style="color:#2ecc71;">${(measure.estimated_benefit || 0).toFixed(0)}</div>
+                            <div class="label">预计年收益 (万元/年)</div>
+                        </div>
+                        <div class="item">
+                            <div class="value" style="color:#3498db;">${measure.category || '-'}</div>
+                            <div class="label">分类</div>
+                        </div>
+                    </div>
+                    <div class="footer">
+                        <span style="font-size:11px; color:#95a5a6;">${measure.implementation_date || ''} ${measure.description ? '| ' + measure.description : ''}</span>
+                        <div class="actions">
+                            <button class="btn-edit" onclick="editMeasure(${measure.id})" title="编辑">✏️</button>
+                            <button class="btn-delete" onclick="deleteMeasure(${measure.id})" title="删除">🗑️</button>
+                        </div>
+                    </div>
+                `;
+                area.appendChild(card);
+            });
+        })
+        .catch(function(e) {
+            area.innerHTML = '<div style="text-align:center; color:#e74c3c; padding:20px; font-size:13px;">❌ 加载失败: ' + e.message + '</div>';
+        });
+    }
+
+    function openMeasureModal(measure) {
+        var modal = document.getElementById('measureModal');
+        var title = document.getElementById('measureModalTitle');
+        var editId = document.getElementById('editMeasureId');
+
+        if (measure) {
+            title.textContent = '编辑碳减排措施';
+            editId.value = measure.id || '';
+            document.getElementById('measureName').value = measure.measure_name || '';
+            document.getElementById('measureType').value = measure.measure_type || '能效提升';
+            document.getElementById('measureCategory').value = measure.category || '';
+            document.getElementById('measureReduction').value = measure.estimated_reduction || 0;
+            document.getElementById('measureCost').value = measure.estimated_cost || 0;
+            document.getElementById('measureBenefit').value = measure.estimated_benefit || 0;
+            document.getElementById('measureFeasibility').value = measure.feasibility || '中';
+            document.getElementById('measureStatus').value = measure.status || '规划中';
+            document.getElementById('measureDate').value = measure.implementation_date || '';
+            document.getElementById('measureDesc').value = measure.description || '';
+        } else {
+            title.textContent = '新增碳减排措施';
+            editId.value = '';
+            document.getElementById('measureName').value = '';
+            document.getElementById('measureType').value = '能效提升';
+            document.getElementById('measureCategory').value = '';
+            document.getElementById('measureReduction').value = '';
+            document.getElementById('measureCost').value = '';
+            document.getElementById('measureBenefit').value = '';
+            document.getElementById('measureFeasibility').value = '中';
+            document.getElementById('measureStatus').value = '规划中';
+            document.getElementById('measureDate').value = '';
+            document.getElementById('measureDesc').value = '';
+        }
+        modal.style.display = 'flex';
+    }
+
+    function closeMeasureModal() {
+        document.getElementById('measureModal').style.display = 'none';
+    }
+
+    function saveMeasure() {
+        var id = document.getElementById('editMeasureId').value;
+        var name = document.getElementById('measureName').value.trim();
+        if (!name) { alert('请输入措施名称'); return; }
+
+        var data = {
+            measure_name: name,
+            measure_type: document.getElementById('measureType').value,
+            category: document.getElementById('measureCategory').value.trim(),
+            estimated_reduction: parseFloat(document.getElementById('measureReduction').value) || 0,
+            estimated_cost: parseFloat(document.getElementById('measureCost').value) || 0,
+            estimated_benefit: parseFloat(document.getElementById('measureBenefit').value) || 0,
+            feasibility: document.getElementById('measureFeasibility').value,
+            status: document.getElementById('measureStatus').value,
+            implementation_date: document.getElementById('measureDate').value,
+            description: document.getElementById('measureDesc').value.trim()
+        };
+
+        var url = id ? '/api/reduction/measures/' + id : '/api/reduction/measures';
+        var method = id ? 'PUT' : 'POST';
+
+        fetch(url, {
+            method: method,
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(result) {
+            if (result.success) {
+                alert(result.message);
+                closeMeasureModal();
+                loadMeasures();
+            } else {
+                alert('操作失败: ' + (result.error || '未知错误'));
+            }
+        })
+        .catch(function(e) {
+            alert('请求失败: ' + e.message);
+        });
+    }
+
+    function editMeasure(id) {
+        fetch('/api/reduction/measures')
+        .then(function(response) { return response.json(); })
+        .then(function(result) {
+            if (result.success) {
+                var measure = result.data.find(function(m) { return m.id === id; });
+                if (measure) {
+                    openMeasureModal(measure);
+                } else {
+                    alert('未找到该措施');
+                }
+            }
+        })
+        .catch(function(e) {
+            alert('加载失败: ' + e.message);
+        });
+    }
+
+    function deleteMeasure(id) {
+        if (!confirm('确定要删除该碳减排措施吗？')) return;
+        fetch('/api/reduction/measures/' + id, {method: 'DELETE'})
+        .then(function(response) { return response.json(); })
+        .then(function(result) {
+            if (result.success) {
+                alert(result.message);
+                loadMeasures();
+            } else {
+                alert('删除失败: ' + (result.error || '未知错误'));
+            }
+        })
+        .catch(function(e) {
+            alert('请求失败: ' + e.message);
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        loadMeasures();
+    });
+</script>
+{% endblock %}

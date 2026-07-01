@@ -1,0 +1,127 @@
+<!-- templates/base.html -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>铁路碳资产管理系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- 侧边栏 - 系统主菜单 -->
+        <aside class="sidebar" id="sidebar">
+            <div class="logo-section">
+                <div class="logo-icon">🚆</div>
+                <div class="logo-text">铁路碳资产</div>
+                <div class="logo-version">v1.0.0</div>
+            </div>
+            
+            <nav class="nav-menu" id="navMenu">
+                <!-- 菜单由 JavaScript 动态生成 -->
+            </nav>
+            
+            <div class="user-section">
+                <div class="user-info">
+                    <span class="user-icon">👤</span>
+                    <div>
+                        <div class="user-name" id="userRealName">管理员</div>
+                        <div class="user-email" id="userEmail">admin@railway.com</div>
+                    </div>
+                </div>
+                <button onclick="logout()" style="margin-top:8px; width:100%; padding:5px; background:#e74c3c; color:white; border:none; border-radius:4px; cursor:pointer; font-size:12px; transition:background 0.2s;" onmouseover="this.style.background='#c0392b'" onmouseout="this.style.background='#e74c3c'">🚪 退出登录</button>
+            </div>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="main-content">
+            <header class="page-header">
+                <h1 id="pageTitle">{% block page_title %}系统管理{% endblock %}</h1>
+                <div class="header-right">
+                    <span class="update-time" id="updateTime"></span>
+                </div>
+            </header>
+
+            <div class="content-area" id="contentArea">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <!-- 模态框容器 -->
+    <div id="modalContainer"></div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+    <script>
+    // ============================================================
+    // 用户信息加载 & 退出登录
+    // ============================================================
+
+    function logout() {
+        if (confirm('确定要退出登录吗？')) {
+            fetch('/api/auth/logout', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'}
+            })
+            .then(function(response) { return response.json(); })
+            .then(function(result) {
+                window.location.href = '/login';
+            })
+            .catch(function() {
+                window.location.href = '/login';
+            });
+        }
+    }
+
+    function loadUserInfo() {
+        fetch('/api/auth/current_user')
+        .then(function(response) { return response.json(); })
+        .then(function(result) {
+            if (result.success) {
+                var user = result.data;
+                var nameEl = document.getElementById('userRealName');
+                var emailEl = document.getElementById('userEmail');
+                if (nameEl) {
+                    nameEl.textContent = user.real_name || user.username || '管理员';
+                }
+                if (emailEl) {
+                    emailEl.textContent = user.email || (user.username || 'admin') + '@railway.com';
+                }
+            }
+        })
+        .catch(function(e) {
+            // 静默失败，不影响页面
+        });
+    }
+
+    // ============================================================
+    // 页面初始化
+    // ============================================================
+    document.addEventListener('DOMContentLoaded', function() {
+        // 加载用户信息
+        loadUserInfo();
+
+        // 更新时间
+        function updateTime() {
+            var now = new Date();
+            var timeStr = now.getFullYear() + '-' +
+                String(now.getMonth() + 1).padStart(2, '0') + '-' +
+                String(now.getDate()).padStart(2, '0') + ' ' +
+                String(now.getHours()).padStart(2, '0') + ':' +
+                String(now.getMinutes()).padStart(2, '0') + ':' +
+                String(now.getSeconds()).padStart(2, '0');
+            var el = document.getElementById('updateTime');
+            if (el) {
+                el.textContent = '🕐 ' + timeStr;
+            }
+        }
+        updateTime();
+        setInterval(updateTime, 1000);
+    });
+    </script>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>
