@@ -1,0 +1,504 @@
+<!-- templates/settings.html -->
+{% extends "base.html" %}
+
+{% block page_title %}系统设置{% endblock %}
+
+{% block content %}
+<div class="page-container" style="height:100%; display:flex; flex-direction:column;">
+    <div class="tab-section" style="display:flex; gap:4px; padding-bottom:8px; border-bottom:1px solid #e1e8ed; flex-shrink:0; flex-wrap:wrap;">
+        <button class="tab-btn active" data-tab="users" onclick="switchSettingsTab('users')">👥 用户管理</button>
+    </div>
+
+    <div class="panel" style="flex:1; display:flex; flex-direction:column; min-height:0; margin-top:8px;">
+        <div class="panel-body" style="flex:1; display:flex; flex-direction:column; min-height:0; padding:12px;">
+
+            <!-- 用户管理 -->
+            <div id="tab-users" class="settings-tab-content" style="flex:1; display:flex; flex-direction:column; min-height:0;">
+                <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom:6px; flex-shrink:0; flex-wrap:wrap; gap:6px; border-bottom:1px solid #f0f0f0;">
+                    <div style="display:flex; gap:6px; align-items:center;">
+                        <span style="font-size:13px; font-weight:bold;">👥 用户列表</span>
+                        <span style="font-size:11px; color:#95a5a6;" id="userCount">共 0 人</span>
+                    </div>
+                    <div style="display:flex; gap:6px;">
+                        <button class="btn btn-primary btn-sm" onclick="openUserModal()" style="font-size:10px; padding:4px 14px; border:none; border-radius:3px; cursor:pointer; background:#3498db; color:white;">➕ 新增用户</button>
+                        <button class="btn btn-sm btn-outline" onclick="loadUsers()" style="font-size:10px; padding:4px 10px; border:1px solid #d0d7de; border-radius:3px; cursor:pointer; background:transparent;">🔄 刷新</button>
+                    </div>
+                </div>
+                <div style="flex:1; overflow:auto; padding-top:10px;" id="userListArea">
+                    <div style="text-align:center; color:#95a5a6; padding:40px 0; font-size:13px;">
+                        ⏳ 加载用户列表中...
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- 弹窗: 新增/编辑用户 -->
+<!-- ============================================================ -->
+<div class="modal" id="userModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; z-index:10000; justify-content:center; align-items:flex-start; padding-top:30px;">
+    <div class="modal-overlay" onclick="closeUserModal()" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9999;"></div>
+    <div class="modal-dialog" style="max-width:500px; width:95%; margin:0 auto; background:white; border-radius:8px; box-shadow:0 4px 30px rgba(0,0,0,0.3); position:relative; z-index:10001; max-height:90vh; display:flex; flex-direction:column;">
+        <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; padding:14px 20px; border-bottom:1px solid #e1e8ed; background:#f8f9fa; border-radius:8px 8px 0 0; flex-shrink:0;">
+            <h3 id="userModalTitle" style="margin:0; font-size:16px;">新增用户</h3>
+            <button class="modal-close" onclick="closeUserModal()" style="background:none; border:none; font-size:24px; cursor:pointer; color:#95a5a6; padding:0 8px;">&times;</button>
+        </div>
+        <div class="modal-body" style="padding:20px; overflow-y:auto; flex:1;">
+            <form id="userForm" onsubmit="return false;">
+                <input type="hidden" id="editUserId" value="">
+
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label style="display:block; font-size:12px; font-weight:600; margin-bottom:3px; color:#2c3e50;">用户名 <span style="color:#e74c3c;">*</span></label>
+                    <input type="text" id="userUsername" class="form-control" placeholder="至少3个字符" style="width:100%; padding:6px 10px; border:1px solid #d0d7de; border-radius:4px; font-size:12px; box-sizing:border-box;">
+                </div>
+                <div class="form-group" style="margin-bottom:12px;" id="passwordGroup">
+                    <label style="display:block; font-size:12px; font-weight:600; margin-bottom:3px; color:#2c3e50;">密码 <span style="color:#e74c3c;">*</span></label>
+                    <input type="password" id="userPassword" class="form-control" placeholder="至少6个字符" style="width:100%; padding:6px 10px; border:1px solid #d0d7de; border-radius:4px; font-size:12px; box-sizing:border-box;">
+                </div>
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label style="display:block; font-size:12px; font-weight:600; margin-bottom:3px; color:#2c3e50;">姓名</label>
+                    <input type="text" id="userRealName" class="form-control" placeholder="请输入真实姓名" style="width:100%; padding:6px 10px; border:1px solid #d0d7de; border-radius:4px; font-size:12px; box-sizing:border-box;">
+                </div>
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label style="display:block; font-size:12px; font-weight:600; margin-bottom:3px; color:#2c3e50;">邮箱</label>
+                    <input type="email" id="userEmail" class="form-control" placeholder="请输入邮箱地址" style="width:100%; padding:6px 10px; border:1px solid #d0d7de; border-radius:4px; font-size:12px; box-sizing:border-box;">
+                </div>
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label style="display:block; font-size:12px; font-weight:600; margin-bottom:3px; color:#2c3e50;">手机号</label>
+                    <input type="text" id="userPhone" class="form-control" placeholder="请输入手机号" style="width:100%; padding:6px 10px; border:1px solid #d0d7de; border-radius:4px; font-size:12px; box-sizing:border-box;">
+                </div>
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label style="display:block; font-size:12px; font-weight:600; margin-bottom:3px; color:#2c3e50;">角色</label>
+                    <select id="userRole" class="form-control" style="width:100%; padding:6px 10px; border:1px solid #d0d7de; border-radius:4px; font-size:12px; box-sizing:border-box;">
+                        <option value="admin">管理员</option>
+                        <option value="user" selected>普通用户</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom:12px;" id="statusGroup">
+                    <label style="display:block; font-size:12px; font-weight:600; margin-bottom:3px; color:#2c3e50;">状态</label>
+                    <select id="userStatus" class="form-control" style="width:100%; padding:6px 10px; border:1px solid #d0d7de; border-radius:4px; font-size:12px; box-sizing:border-box;">
+                        <option value="启用">启用</option>
+                        <option value="禁用">禁用</option>
+                    </select>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:8px; padding:12px 20px; border-top:1px solid #e1e8ed; background:#f8f9fa; border-radius:0 0 8px 8px; flex-shrink:0;">
+            <button class="btn btn-secondary" onclick="closeUserModal()" style="padding:6px 20px; border:none; border-radius:4px; cursor:pointer; background:#95a5a6; color:white;">取消</button>
+            <button class="btn btn-primary" onclick="saveUser()" style="padding:6px 20px; border:none; border-radius:4px; cursor:pointer; background:#3498db; color:white;">保存</button>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- 弹窗: 重置密码 -->
+<!-- ============================================================ -->
+<div class="modal" id="resetPwdModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; z-index:10000; justify-content:center; align-items:flex-start; padding-top:30px;">
+    <div class="modal-overlay" onclick="closeResetPwdModal()" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9999;"></div>
+    <div class="modal-dialog" style="max-width:400px; width:95%; margin:0 auto; background:white; border-radius:8px; box-shadow:0 4px 30px rgba(0,0,0,0.3); position:relative; z-index:10001; max-height:90vh; display:flex; flex-direction:column;">
+        <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; padding:14px 20px; border-bottom:1px solid #e1e8ed; background:#f8f9fa; border-radius:8px 8px 0 0; flex-shrink:0;">
+            <h3 style="margin:0; font-size:16px;">重置密码</h3>
+            <button class="modal-close" onclick="closeResetPwdModal()" style="background:none; border:none; font-size:24px; cursor:pointer; color:#95a5a6; padding:0 8px;">&times;</button>
+        </div>
+        <div class="modal-body" style="padding:20px; overflow-y:auto; flex:1;">
+            <input type="hidden" id="resetUserId" value="">
+            <div class="form-group" style="margin-bottom:12px;">
+                <label style="display:block; font-size:12px; font-weight:600; margin-bottom:3px; color:#2c3e50;">新密码 <span style="color:#e74c3c;">*</span></label>
+                <input type="password" id="resetNewPassword" class="form-control" placeholder="至少6个字符" style="width:100%; padding:6px 10px; border:1px solid #d0d7de; border-radius:4px; font-size:12px; box-sizing:border-box;">
+            </div>
+            <div class="form-group" style="margin-bottom:12px;">
+                <label style="display:block; font-size:12px; font-weight:600; margin-bottom:3px; color:#2c3e50;">确认密码 <span style="color:#e74c3c;">*</span></label>
+                <input type="password" id="resetConfirmPassword" class="form-control" placeholder="再次输入新密码" style="width:100%; padding:6px 10px; border:1px solid #d0d7de; border-radius:4px; font-size:12px; box-sizing:border-box;">
+            </div>
+        </div>
+        <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:8px; padding:12px 20px; border-top:1px solid #e1e8ed; background:#f8f9fa; border-radius:0 0 8px 8px; flex-shrink:0;">
+            <button class="btn btn-secondary" onclick="closeResetPwdModal()" style="padding:6px 20px; border:none; border-radius:4px; cursor:pointer; background:#95a5a6; color:white;">取消</button>
+            <button class="btn btn-primary" onclick="resetPassword()" style="padding:6px 20px; border:none; border-radius:4px; cursor:pointer; background:#3498db; color:white;">确认重置</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .user-table-wrap { overflow: auto; width: 100%; }
+    .user-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 700px; }
+    .user-table thead { position: sticky; top: 0; z-index: 10; }
+    .user-table th {
+        background: #f8f9fa;
+        padding: 8px 6px;
+        text-align: center;
+        border-bottom: 2px solid #e1e8ed;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    .user-table td {
+        padding: 6px 4px;
+        text-align: center;
+        vertical-align: middle;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    .user-table tbody tr:hover { background: #f8f9fa; }
+    .user-table .status-badge {
+        display: inline-block;
+        padding: 2px 10px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 500;
+    }
+    .user-table .status-badge.active { background: #d4edda; color: #155724; }
+    .user-table .status-badge.inactive { background: #f8d7da; color: #721c24; }
+    .user-table .action-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 14px;
+        padding: 2px 6px;
+        border-radius: 3px;
+    }
+    .user-table .action-btn.edit { color: #3498db; }
+    .user-table .action-btn.edit:hover { background: #e8f4fd; }
+    .user-table .action-btn.delete { color: #e74c3c; }
+    .user-table .action-btn.delete:hover { background: #fde8e8; }
+    .user-table .action-btn.reset { color: #f39c12; }
+    .user-table .action-btn.reset:hover { background: #fef3e2; }
+    .user-table-note {
+        margin-top: 10px;
+        padding: 8px 12px;
+        background: #f8f9fa;
+        border-radius: 4px;
+        font-size: 11px;
+        color: #7f8c8d;
+    }
+</style>
+
+<script>
+    var currentEditUserId = null;
+
+    function switchSettingsTab(tab) {
+        document.querySelectorAll('.tab-btn').forEach(function(btn) {
+            btn.classList.toggle('active', btn.dataset.tab === tab);
+        });
+        document.querySelectorAll('.settings-tab-content').forEach(function(el) {
+            el.style.display = 'none';
+        });
+        var target = document.getElementById('tab-' + tab);
+        if (target) {
+            target.style.display = 'flex';
+        }
+        if (tab === 'users') {
+            loadUsers();
+        }
+    }
+
+    // ============================================================
+    // 用户管理
+    // ============================================================
+
+    function loadUsers() {
+        var area = document.getElementById('userListArea');
+        area.innerHTML = '<div style="text-align:center; color:#95a5a6; padding:20px; font-size:13px;">⏳ 加载中...</div>';
+
+        fetch('/api/users')
+        .then(function(response) { return response.json(); })
+        .then(function(result) {
+            if (!result.success) {
+                area.innerHTML = '<div style="text-align:center; color:#e74c3c; padding:20px; font-size:13px;">❌ ' + (result.error || '加载失败') + '</div>';
+                return;
+            }
+
+            var data = result.data || [];
+            var countEl = document.getElementById('userCount');
+            if (countEl) countEl.textContent = '共 ' + data.length + ' 人';
+
+            area.innerHTML = '';
+            if (data.length === 0) {
+                area.innerHTML = '<div style="text-align:center; color:#95a5a6; padding:40px 0; font-size:13px;">📌 暂无用户，点击"新增用户"添加</div>';
+                return;
+            }
+
+            var tableWrap = document.createElement('div');
+            tableWrap.className = 'user-table-wrap';
+
+            var table = document.createElement('table');
+            table.className = 'user-table';
+
+            var thead = document.createElement('thead');
+            var headerRow = document.createElement('tr');
+            var headers = ['序号', '用户名', '姓名', '邮箱', '手机号', '角色', '状态', '最后登录', '操作'];
+
+            headers.forEach(function(h) {
+                var th = document.createElement('th');
+                th.textContent = h;
+                headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+
+            var tbody = document.createElement('tbody');
+
+            data.forEach(function(user, index) {
+                var tr = document.createElement('tr');
+
+                var rowData = [
+                    index + 1,
+                    user.username || '-',
+                    user.real_name || '-',
+                    user.email || '-',
+                    user.phone || '-',
+                    user.role === 'admin' ? '管理员' : '普通用户',
+                    user.status || '启用'
+                ];
+
+                rowData.forEach(function(value, idx) {
+                    var td = document.createElement('td');
+                    if (idx === 6) {
+                        // 状态列
+                        var badge = document.createElement('span');
+                        badge.className = 'status-badge ' + (value === '启用' ? 'active' : 'inactive');
+                        badge.textContent = value;
+                        td.appendChild(badge);
+                    } else {
+                        td.textContent = value;
+                    }
+                    tr.appendChild(td);
+                });
+
+                // 最后登录
+                var loginTd = document.createElement('td');
+                loginTd.textContent = user.last_login ? user.last_login.replace('T', ' ').substring(0, 16) : '-';
+                loginTd.style.fontSize = '11px';
+                loginTd.style.color = '#95a5a6';
+                tr.appendChild(loginTd);
+
+                // 操作列
+                var actionTd = document.createElement('td');
+
+                var editBtn = document.createElement('button');
+                editBtn.textContent = '✏️';
+                editBtn.title = '编辑';
+                editBtn.className = 'action-btn edit';
+                editBtn.onclick = function(e) {
+                    e.stopPropagation();
+                    openUserModal(user);
+                };
+                actionTd.appendChild(editBtn);
+
+                var resetBtn = document.createElement('button');
+                resetBtn.textContent = '🔑';
+                resetBtn.title = '重置密码';
+                resetBtn.className = 'action-btn reset';
+                resetBtn.onclick = function(e) {
+                    e.stopPropagation();
+                    openResetPwdModal(user.id);
+                };
+                actionTd.appendChild(resetBtn);
+
+                if (user.role !== 'admin') {
+                    var delBtn = document.createElement('button');
+                    delBtn.textContent = '🗑️';
+                    delBtn.title = '删除';
+                    delBtn.className = 'action-btn delete';
+                    delBtn.onclick = function(e) {
+                        e.stopPropagation();
+                        if (confirm('确定要删除用户 "' + (user.username || '') + '" 吗？')) {
+                            deleteUser(user.id);
+                        }
+                    };
+                    actionTd.appendChild(delBtn);
+                }
+
+                tr.appendChild(actionTd);
+                tbody.appendChild(tr);
+            });
+
+            table.appendChild(tbody);
+            tableWrap.appendChild(table);
+            area.appendChild(tableWrap);
+
+            var note = document.createElement('div');
+            note.className = 'user-table-note';
+            note.innerHTML = '💡 点击 ✏️ 编辑用户，点击 🔑 重置密码，点击 🗑️ 删除用户（管理员不可删除）。';
+            area.appendChild(note);
+        })
+        .catch(function(e) {
+            area.innerHTML = '<div style="text-align:center; color:#e74c3c; padding:20px; font-size:13px;">❌ 加载失败: ' + e.message + '</div>';
+        });
+    }
+
+    function openUserModal(user) {
+        var modal = document.getElementById('userModal');
+        var title = document.getElementById('userModalTitle');
+        var editId = document.getElementById('editUserId');
+        var passwordGroup = document.getElementById('passwordGroup');
+        var statusGroup = document.getElementById('statusGroup');
+
+        if (user) {
+            title.textContent = '编辑用户';
+            editId.value = user.id || '';
+            document.getElementById('userUsername').value = user.username || '';
+            document.getElementById('userUsername').disabled = true;
+            document.getElementById('userPassword').value = '';
+            document.getElementById('userPassword').placeholder = '不修改请留空';
+            passwordGroup.querySelector('label span').textContent = '';
+            document.getElementById('userRealName').value = user.real_name || '';
+            document.getElementById('userEmail').value = user.email || '';
+            document.getElementById('userPhone').value = user.phone || '';
+            document.getElementById('userRole').value = user.role || 'user';
+            document.getElementById('userStatus').value = user.status || '启用';
+            statusGroup.style.display = 'block';
+        } else {
+            title.textContent = '新增用户';
+            editId.value = '';
+            document.getElementById('userUsername').value = '';
+            document.getElementById('userUsername').disabled = false;
+            document.getElementById('userPassword').value = '';
+            document.getElementById('userPassword').placeholder = '至少6个字符';
+            passwordGroup.querySelector('label span').textContent = '*';
+            document.getElementById('userRealName').value = '';
+            document.getElementById('userEmail').value = '';
+            document.getElementById('userPhone').value = '';
+            document.getElementById('userRole').value = 'user';
+            document.getElementById('userStatus').value = '启用';
+            statusGroup.style.display = 'block';
+        }
+
+        modal.style.display = 'flex';
+    }
+
+    function closeUserModal() {
+        document.getElementById('userModal').style.display = 'none';
+    }
+
+    function saveUser() {
+        var id = document.getElementById('editUserId').value;
+        var username = document.getElementById('userUsername').value.trim();
+        var password = document.getElementById('userPassword').value;
+        var realName = document.getElementById('userRealName').value.trim();
+        var email = document.getElementById('userEmail').value.trim();
+        var phone = document.getElementById('userPhone').value.trim();
+        var role = document.getElementById('userRole').value;
+        var status = document.getElementById('userStatus').value;
+
+        if (!username) {
+            alert('请输入用户名');
+            return;
+        }
+        if (username.length < 3) {
+            alert('用户名至少3个字符');
+            return;
+        }
+
+        if (!id && !password) {
+            alert('请输入密码');
+            return;
+        }
+        if (!id && password.length < 6) {
+            alert('密码至少6个字符');
+            return;
+        }
+
+        var data = {
+            username: username,
+            real_name: realName,
+            email: email,
+            phone: phone,
+            role: role,
+            status: status
+        };
+        if (password) {
+            data.password = password;
+        }
+
+        var url = id ? '/api/users/' + id : '/api/users';
+        var method = id ? 'PUT' : 'POST';
+
+        fetch(url, {
+            method: method,
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(result) {
+            if (result.success) {
+                alert(result.message || '保存成功');
+                closeUserModal();
+                loadUsers();
+            } else {
+                alert('操作失败: ' + (result.error || '未知错误'));
+            }
+        })
+        .catch(function(e) {
+            alert('请求失败: ' + e.message);
+        });
+    }
+
+    function deleteUser(userId) {
+        fetch('/api/users/' + userId, {
+            method: 'DELETE'
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(result) {
+            if (result.success) {
+                alert(result.message);
+                loadUsers();
+            } else {
+                alert('删除失败: ' + (result.error || '未知错误'));
+            }
+        })
+        .catch(function(e) {
+            alert('请求失败: ' + e.message);
+        });
+    }
+
+    function openResetPwdModal(userId) {
+        document.getElementById('resetUserId').value = userId;
+        document.getElementById('resetNewPassword').value = '';
+        document.getElementById('resetConfirmPassword').value = '';
+        document.getElementById('resetPwdModal').style.display = 'flex';
+    }
+
+    function closeResetPwdModal() {
+        document.getElementById('resetPwdModal').style.display = 'none';
+    }
+
+    function resetPassword() {
+        var userId = document.getElementById('resetUserId').value;
+        var newPwd = document.getElementById('resetNewPassword').value;
+        var confirmPwd = document.getElementById('resetConfirmPassword').value;
+
+        if (!newPwd || newPwd.length < 6) {
+            alert('密码至少6个字符');
+            return;
+        }
+        if (newPwd !== confirmPwd) {
+            alert('两次输入的密码不一致');
+            return;
+        }
+
+        fetch('/api/users/' + userId + '/reset_password', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({password: newPwd})
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(result) {
+            if (result.success) {
+                alert(result.message);
+                closeResetPwdModal();
+                loadUsers();
+            } else {
+                alert('重置失败: ' + (result.error || '未知错误'));
+            }
+        })
+        .catch(function(e) {
+            alert('请求失败: ' + e.message);
+        });
+    }
+
+    // 页面初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        loadUsers();
+    });
+</script>
+{% endblock %}

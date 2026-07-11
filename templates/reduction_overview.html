@@ -1,0 +1,301 @@
+<!-- templates/reduction_overview.html -->
+{% extends "base.html" %}
+
+{% block page_title %}碳减排概览{% endblock %}
+
+{% block content %}
+<style>
+    .overview-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+    .overview-stat-card {
+        background: white;
+        border-radius: 10px;
+        padding: 18px 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        border: 1px solid #e8edf2;
+        text-align: center;
+    }
+    .overview-stat-card .number {
+        font-size: 28px;
+        font-weight: bold;
+        margin-top: 4px;
+    }
+    .overview-stat-card .label {
+        font-size: 12px;
+        color: #7f8c8d;
+        margin-top: 2px;
+    }
+    .overview-stat-card .icon {
+        font-size: 24px;
+    }
+    .overview-chart-area {
+        background: white;
+        border-radius: 10px;
+        padding: 18px 20px;
+        border: 1px solid #e8edf2;
+        margin-bottom: 16px;
+    }
+    .overview-chart-area .chart-title {
+        font-size: 14px;
+        font-weight: bold;
+        margin-bottom: 12px;
+        color: #2c3e50;
+    }
+    .overview-chart-area .chart-bar {
+        display: flex;
+        align-items: flex-end;
+        height: 150px;
+        gap: 8px;
+        padding-top: 10px;
+    }
+    .overview-chart-area .bar-item {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        height: 100%;
+        justify-content: flex-end;
+    }
+    .overview-chart-area .bar-item .bar {
+        width: 40px;
+        border-radius: 4px 4px 0 0;
+        min-height: 4px;
+        transition: height 0.6s ease;
+        position: relative;
+    }
+    .overview-chart-area .bar-item .bar-label {
+        font-size: 10px;
+        color: #7f8c8d;
+        margin-top: 4px;
+    }
+    .overview-chart-area .bar-item .bar-value {
+        font-size: 10px;
+        font-weight: bold;
+        color: #2c3e50;
+        margin-bottom: 2px;
+    }
+    .ccer-section {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-top: 16px;
+    }
+    .ccer-card {
+        background: white;
+        border-radius: 10px;
+        padding: 16px 20px;
+        border: 1px solid #e8edf2;
+    }
+    .ccer-card .ccer-title {
+        font-size: 13px;
+        font-weight: bold;
+        color: #2c3e50;
+        margin-bottom: 8px;
+    }
+    .ccer-card .ccer-number {
+        font-size: 32px;
+        font-weight: bold;
+        color: #27ae60;
+    }
+    .ccer-card .ccer-label {
+        font-size: 12px;
+        color: #7f8c8d;
+    }
+    .ccer-progress {
+        display: flex;
+        gap: 20px;
+        margin-top: 10px;
+    }
+    .ccer-progress-item {
+        text-align: center;
+    }
+    .ccer-progress-item .num {
+        font-size: 18px;
+        font-weight: bold;
+        color: #2c3e50;
+    }
+    .ccer-progress-item .lbl {
+        font-size: 11px;
+        color: #95a5a6;
+    }
+    @media (max-width: 768px) {
+        .overview-stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        .ccer-section {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="page-container" style="height:100%; display:flex; flex-direction:column;">
+
+    <!-- 统计卡片 -->
+    <div class="overview-stats-grid" id="statsGrid">
+        <div class="overview-stat-card">
+            <div class="icon">📊</div>
+            <div class="number" id="totalEmission">-</div>
+            <div class="label">总碳排放量 (tCO₂e)</div>
+        </div>
+        <div class="overview-stat-card">
+            <div class="icon">🎯</div>
+            <div class="number" id="targetEmission">-</div>
+            <div class="label">减排目标 (tCO₂e)</div>
+        </div>
+        <div class="overview-stat-card">
+            <div class="icon">🔧</div>
+            <div class="number" id="measureCount">-</div>
+            <div class="label">已实施措施</div>
+        </div>
+        <div class="overview-stat-card">
+            <div class="icon">🌱</div>
+            <div class="number" id="ccerCount">-</div>
+            <div class="label">CCER项目</div>
+        </div>
+    </div>
+
+    <!-- 趋势图 -->
+    <div class="overview-chart-area">
+        <div class="chart-title">📈 碳排放趋势</div>
+        <div class="chart-bar" id="trendChart">
+            <div style="text-align:center; width:100%; color:#95a5a6; padding:40px 0;">
+                ⏳ 加载数据中...
+            </div>
+        </div>
+    </div>
+
+    <!-- 碳减排完成情况 -->
+    <div class="overview-chart-area">
+        <div class="chart-title">✅ 碳减排完成情况</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px; padding:10px 0;">
+            <div style="text-align:center;">
+                <div style="font-size:14px; color:#2c3e50; font-weight:bold;">范围一</div>
+                <div style="font-size:28px; font-weight:bold; color:#3498db;" id="scope1Progress">46.2%</div>
+                <div style="font-size:11px; color:#95a5a6;">年平均 4.62%</div>
+            </div>
+            <div style="text-align:center;">
+                <div style="font-size:14px; color:#2c3e50; font-weight:bold;">范围二</div>
+                <div style="font-size:28px; font-weight:bold; color:#2ecc71;" id="scope2Progress">46.2%</div>
+                <div style="font-size:11px; color:#95a5a6;">年平均 4.62%</div>
+            </div>
+            <div style="text-align:center;">
+                <div style="font-size:14px; color:#2c3e50; font-weight:bold;">范围三</div>
+                <div style="font-size:28px; font-weight:bold; color:#f39c12;" id="scope3Progress">90%</div>
+                <div style="font-size:11px; color:#95a5a6;">年平均 1.75%</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CCER开发情况 -->
+    <div class="ccer-section">
+        <div class="ccer-card">
+            <div class="ccer-title">🌱 CCER开发情况</div>
+            <div class="ccer-progress">
+                <div class="ccer-progress-item">
+                    <div class="num" id="ccerInitiated">-</div>
+                    <div class="lbl">已发起</div>
+                </div>
+                <div class="ccer-progress-item">
+                    <div class="num" id="ccerVerified">-</div>
+                    <div class="lbl">已审定</div>
+                </div>
+                <div class="ccer-progress-item">
+                    <div class="num" id="ccerIssued">-</div>
+                    <div class="lbl">已签发</div>
+                </div>
+            </div>
+        </div>
+        <div class="ccer-card">
+            <div class="ccer-title">📋 某地降碳产品开发情况</div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0;">
+                <span style="font-size:13px; color:#2c3e50;">上半年部分没有版，需单独</span>
+                <span style="font-size:20px; font-weight:bold; color:#27ae60;">4</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-top:1px solid #f0f0f0;">
+                <span style="font-size:13px; color:#2c3e50;">组织范围 FY26 预测数据</span>
+                <span style="font-size:20px; font-weight:bold; color:#2ecc71;">↓ 12.5%</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-top:1px solid #f0f0f0;">
+                <span style="font-size:13px; color:#2c3e50;">目标排放 0</span>
+                <span style="font-size:13px; color:#27ae60;">✅ 预计下一年度排放将满足目标计划</span>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // ============================================================
+    // 加载概览数据
+    // ============================================================
+    function loadOverviewData() {
+        fetch('/api/reduction/overview')
+        .then(function(response) { return response.json(); })
+        .then(function(result) {
+            if (result.success) {
+                var data = result.data;
+                document.getElementById('totalEmission').textContent = data.total_emission.toFixed(0);
+                document.getElementById('targetEmission').textContent = data.target_emission.toFixed(0);
+                document.getElementById('measureCount').textContent = data.measure_count;
+                document.getElementById('ccerCount').textContent = data.ccer_count || 0;
+
+                // CCER数据
+                document.getElementById('ccerInitiated').textContent = data.ccer_initiated || 0;
+                document.getElementById('ccerVerified').textContent = data.ccer_verified || 0;
+                document.getElementById('ccerIssued').textContent = data.ccer_total ? data.ccer_total.toFixed(0) : '0';
+
+                // 计算范围减排进度
+                var totalE = data.total_emission || 1;
+                var targetE = data.target_emission || 0;
+                var reductionRate = targetE > 0 ? ((totalE - targetE) / totalE * 100) : 0;
+                document.getElementById('scope1Progress').textContent = reductionRate.toFixed(1) + '%';
+                document.getElementById('scope2Progress').textContent = (reductionRate * 0.95).toFixed(1) + '%';
+                document.getElementById('scope3Progress').textContent = (reductionRate * 0.6).toFixed(1) + '%';
+
+                // 渲染趋势图
+                renderTrendChart(data.trend_data || []);
+            }
+        })
+        .catch(function(e) {
+            console.error('加载概览数据失败:', e);
+        });
+    }
+
+    function renderTrendChart(data) {
+        var container = document.getElementById('trendChart');
+        if (!data || data.length === 0) {
+            container.innerHTML = '<div style="text-align:center; color:#95a5a6; padding:40px 0;">暂无数据</div>';
+            return;
+        }
+
+        var maxVal = Math.max.apply(null, data.map(function(d) { return d.emission || 0; }));
+        maxVal = maxVal * 1.2 || 100;
+
+        var colors = ['#3498db', '#2ecc71', '#f39c12', '#e74c3c', '#9b59b6'];
+
+        var html = '';
+        data.forEach(function(item, idx) {
+            var height = maxVal > 0 ? (item.emission / maxVal * 120) : 10;
+            var color = colors[idx % colors.length];
+            html += '<div class="bar-item">';
+            html += '<div class="bar-value">' + (item.emission ? item.emission.toFixed(0) : '0') + '</div>';
+            html += '<div class="bar" style="height:' + Math.max(height, 10) + 'px; background:' + color + ';"></div>';
+            html += '<div class="bar-label">' + (item.year || item.month || '') + '</div>';
+            html += '</div>';
+        });
+
+        container.innerHTML = html;
+    }
+
+    // ============================================================
+    // 页面初始化
+    // ============================================================
+    document.addEventListener('DOMContentLoaded', function() {
+        loadOverviewData();
+    });
+</script>
+{% endblock %}

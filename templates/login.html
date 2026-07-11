@@ -1,0 +1,203 @@
+<!-- templates/login.html -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>铁路碳资产管理系统 - 登录</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1a2a3a, #2c3e50);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .login-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px 45px;
+            width: 400px;
+            max-width: 95%;
+        }
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .login-header .logo-icon {
+            font-size: 48px;
+            display: block;
+            margin-bottom: 8px;
+        }
+        .login-header h1 {
+            font-size: 22px;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+        .login-header p {
+            font-size: 13px;
+            color: #95a5a6;
+            margin-top: 4px;
+        }
+        .form-group {
+            margin-bottom: 18px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52,152,219,0.1);
+        }
+        .form-group input.error {
+            border-color: #e74c3c;
+        }
+        .login-btn {
+            width: 100%;
+            padding: 11px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .login-btn:hover {
+            background: #2980b9;
+        }
+        .login-btn:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+        .error-msg {
+            color: #e74c3c;
+            font-size: 13px;
+            margin-top: 6px;
+            display: none;
+            text-align: center;
+        }
+        .error-msg.show {
+            display: block;
+        }
+        .login-footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 12px;
+            color: #95a5a6;
+        }
+        .login-footer .version {
+            margin-top: 4px;
+            font-size: 11px;
+            color: #bdc3c7;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <span class="logo-icon">🚆</span>
+            <h1>铁路碳资产管理系统</h1>
+            <p>Carbon Asset Management System</p>
+        </div>
+
+        <form id="loginForm" onsubmit="return false;">
+            <div class="form-group">
+                <label for="username">用户名</label>
+                <input type="text" id="username" placeholder="请输入用户名" autofocus>
+            </div>
+            <div class="form-group">
+                <label for="password">密码</label>
+                <input type="password" id="password" placeholder="请输入密码" onkeydown="if(event.key==='Enter') login()">
+            </div>
+
+            <div id="errorMsg" class="error-msg">用户名或密码错误</div>
+
+            <button type="button" class="login-btn" id="loginBtn" onclick="login()">登 录</button>
+        </form>
+
+        <div class="login-footer">
+            <div>默认管理员账号: admin / 密码: admin123</div>
+            <div class="version">v1.0.0</div>
+        </div>
+    </div>
+
+    <script>
+        function login() {
+            var username = document.getElementById('username').value.trim();
+            var password = document.getElementById('password').value.trim();
+            var btn = document.getElementById('loginBtn');
+            var errorMsg = document.getElementById('errorMsg');
+
+            // 清除错误状态
+            errorMsg.classList.remove('show');
+            document.getElementById('username').classList.remove('error');
+            document.getElementById('password').classList.remove('error');
+
+            if (!username) {
+                errorMsg.textContent = '请输入用户名';
+                errorMsg.classList.add('show');
+                document.getElementById('username').classList.add('error');
+                return;
+            }
+            if (!password) {
+                errorMsg.textContent = '请输入密码';
+                errorMsg.classList.add('show');
+                document.getElementById('password').classList.add('error');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = '登录中...';
+
+            fetch('/api/auth/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username: username, password: password})
+            })
+            .then(function(response) { return response.json(); })
+            .then(function(result) {
+                btn.disabled = false;
+                btn.textContent = '登 录';
+
+                if (result.success) {
+                    // 登录成功，跳转到首页
+                    window.location.href = '/';
+                } else {
+                    errorMsg.textContent = result.error || '登录失败，请重试';
+                    errorMsg.classList.add('show');
+                }
+            })
+            .catch(function(e) {
+                btn.disabled = false;
+                btn.textContent = '登 录';
+                errorMsg.textContent = '网络错误，请重试';
+                errorMsg.classList.add('show');
+            });
+        }
+    </script>
+</body>
+</html>

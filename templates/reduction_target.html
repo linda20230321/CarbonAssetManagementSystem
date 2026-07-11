@@ -1,0 +1,414 @@
+<!-- templates/reduction_target.html -->
+{% extends "base.html" %}
+
+{% block page_title %}碳减排目标{% endblock %}
+
+{% block content %}
+<style>
+    .target-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin-bottom: 16px;
+    }
+    .target-stats .stat-card {
+        background: white;
+        border-radius: 8px;
+        padding: 14px 18px;
+        border: 1px solid #e8edf2;
+        text-align: center;
+    }
+    .target-stats .stat-card .num {
+        font-size: 24px;
+        font-weight: bold;
+    }
+    .target-stats .stat-card .lbl {
+        font-size: 12px;
+        color: #7f8c8d;
+    }
+    .target-card {
+        background: white;
+        border-radius: 8px;
+        padding: 16px 20px;
+        border: 1px solid #e8edf2;
+        margin-bottom: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+        transition: box-shadow 0.2s;
+        cursor: pointer;
+    }
+    .target-card:hover {
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+    .target-card .info .name {
+        font-size: 15px;
+        font-weight: bold;
+        color: #2c3e50;
+    }
+    .target-card .info .detail {
+        font-size: 12px;
+        color: #7f8c8d;
+        margin-top: 2px;
+    }
+    .target-card .progress-area {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+    .target-card .progress-area .progress-bar {
+        width: 120px;
+        height: 6px;
+        background: #ecf0f1;
+        border-radius: 3px;
+        overflow: hidden;
+    }
+    .target-card .progress-area .progress-bar .fill {
+        height: 100%;
+        border-radius: 3px;
+        transition: width 0.5s ease;
+    }
+    .target-card .progress-area .pct {
+        font-size: 14px;
+        font-weight: bold;
+        min-width: 40px;
+    }
+    .target-card .status-badge {
+        padding: 2px 12px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 500;
+    }
+    .status-badge.active { background: #d4edda; color: #155724; }
+    .status-badge.pending { background: #fff3cd; color: #856404; }
+    .status-badge.completed { background: #cce5ff; color: #004085; }
+    .target-actions {
+        display: flex;
+        gap: 4px;
+    }
+    .target-actions button {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 14px;
+        padding: 2px 6px;
+        border-radius: 3px;
+    }
+    .target-actions .btn-edit { color: #3498db; }
+    .target-actions .btn-edit:hover { background: #e8f4fd; }
+    .target-actions .btn-delete { color: #e74c3c; }
+    .target-actions .btn-delete:hover { background: #fde8e8; }
+</style>
+
+<div class="page-container" style="height:100%; display:flex; flex-direction:column;">
+
+    <!-- 统计 -->
+    <div class="target-stats">
+        <div class="stat-card">
+            <div class="num" style="color:#3498db;" id="totalTargets">0</div>
+            <div class="lbl">总目标数</div>
+        </div>
+        <div class="stat-card">
+            <div class="num" style="color:#2ecc71;" id="activeTargets">0</div>
+            <div class="lbl">进行中</div>
+        </div>
+        <div class="stat-card">
+            <div class="num" style="color:#27ae60;" id="completedTargets">0</div>
+            <div class="lbl">已完成</div>
+        </div>
+    </div>
+
+    <!-- 工具栏 -->
+    <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom:10px; border-bottom:1px solid #e1e8ed; flex-shrink:0; flex-wrap:wrap; gap:6px;">
+        <span style="font-size:13px; font-weight:bold;">🎯 碳减排目标列表</span>
+        <div style="display:flex; gap:6px;">
+            <button class="btn btn-primary btn-sm" onclick="openTargetModal()" style="font-size:10px; padding:4px 14px; border:none; border-radius:3px; cursor:pointer; background:#3498db; color:white;">➕ 新增目标</button>
+            <button class="btn btn-sm btn-outline" onclick="loadTargets()" style="font-size:10px; padding:4px 10px; border:1px solid #d0d7de; border-radius:3px; cursor:pointer; background:transparent;">🔄 刷新</button>
+        </div>
+    </div>
+
+    <!-- 目标列表 -->
+    <div style="flex:1; overflow:auto; padding-top:12px;" id="targetList">
+        <div style="text-align:center; color:#95a5a6; padding:40px 0; font-size:13px;">
+            ⏳ 加载目标列表中...
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- 弹窗: 新增/编辑目标 -->
+<!-- ============================================================ -->
+<div class="modal" id="targetModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; z-index:10000; justify-content:center; align-items:flex-start; padding-top:30px;">
+    <div class="modal-overlay" onclick="closeTargetModal()" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9999;"></div>
+    <div class="modal-dialog" style="max-width:550px; width:95%; margin:0 auto; background:white; border-radius:8px; box-shadow:0 4px 30px rgba(0,0,0,0.3); position:relative; z-index:10001; max-height:90vh; display:flex; flex-direction:column;">
+        <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; padding:14px 20px; border-bottom:1px solid #e1e8ed; background:#f8f9fa; border-radius:8px 8px 0 0; flex-shrink:0;">
+            <h3 id="targetModalTitle" style="margin:0; font-size:16px;">新增碳减排目标</h3>
+            <button class="modal-close" onclick="closeTargetModal()" style="background:none; border:none; font-size:24px; cursor:pointer; color:#95a5a6; padding:0 8px;">&times;</button>
+        </div>
+        <div class="modal-body" style="padding:20px; overflow-y:auto; flex:1;">
+            <form id="targetForm" onsubmit="return false;">
+                <input type="hidden" id="editTargetId" value="">
+
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label style="display:block; font-size:12px; font-weight:600; margin-bottom:3px; color:#2c3e50;">目标名称 <span style="color:#e74c3c;">*</span></label>
+                    <input type="text" id="targetName" class="form-control" placeholder="如：XXX工厂的减排目标" style="width:100%; padding:6px 10px; border:1px solid #d0d7de; border-radius:4px; font-size:12px; box-sizing:border-box;">
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label style="display:block; font-size:12px; font-weight:600; margin-bottom:3px; color:#2c3e50;">基准年</label>
+                        <input type="number" id="targetBaseYear" class="form-control" value="2025" style="width:100%; padding:6px 10px; border:1px solid #d0d7de; border-radius:4px; font-size:12px; box-sizing:border-box;">
+                    </div>
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label style="display:block; font-size:12px; font-weight:600; margin-bottom:3px; color:#2c3e50;">目标年</label>
+                        <input type="number" id="targetYear" class="form-control" value="2035" style="width:100%; padding:6px 10px; border:1px solid #d0d7de; border-radius:4px; font-size:12px; box-sizing:border-box;">
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label style="display:block; font-size:12px; font-weight:600; margin-bottom:3px; color:#2c3e50;">减排百分比 (%)</label>
+                        <input type="number" id="targetReduction" class="form-control" value="46.2" step="0.1" style="width:100%; padding:6px 10px; border:1px solid #d0d7de; border-radius:4px; font-size:12px; box-sizing:border-box;">
+                    </div>
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label style="display:block; font-size:12px; font-weight:600; margin-bottom:3px; color:#2c3e50;">SBT目标等级</label>
+                        <select id="targetSbt" class="form-control" style="width:100%; padding:6px 10px; border:1px solid #d0d7de; border-radius:4px; font-size:12px; box-sizing:border-box;">
+                            <option value="1.5°C">1.5°C</option>
+                            <option value="优于2°C">优于2°C</option>
+                            <option value="2°C">2°C</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label style="display:block; font-size:12px; font-weight:600; margin-bottom:3px; color:#2c3e50;">当前排放 (tCO₂e)</label>
+                        <input type="number" id="targetCurrent" class="form-control" value="5000" style="width:100%; padding:6px 10px; border:1px solid #d0d7de; border-radius:4px; font-size:12px; box-sizing:border-box;">
+                    </div>
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label style="display:block; font-size:12px; font-weight:600; margin-bottom:3px; color:#2c3e50;">目标排放 (tCO₂e)</label>
+                        <input type="number" id="targetEmission" class="form-control" value="2688" style="width:100%; padding:6px 10px; border:1px solid #d0d7de; border-radius:4px; font-size:12px; box-sizing:border-box;">
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label style="display:block; font-size:12px; font-weight:600; margin-bottom:3px; color:#2c3e50;">目标范围</label>
+                        <select id="targetScope" class="form-control" style="width:100%; padding:6px 10px; border:1px solid #d0d7de; border-radius:4px; font-size:12px; box-sizing:border-box;">
+                            <option value="范围一">范围一</option>
+                            <option value="范围二">范围二</option>
+                            <option value="范围三">范围三</option>
+                            <option value="范围一+范围二" selected>范围一+范围二</option>
+                            <option value="全部范围">全部范围</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label style="display:block; font-size:12px; font-weight:600; margin-bottom:3px; color:#2c3e50;">状态</label>
+                        <select id="targetStatus" class="form-control" style="width:100%; padding:6px 10px; border:1px solid #d0d7de; border-radius:4px; font-size:12px; box-sizing:border-box;">
+                            <option value="进行中">进行中</option>
+                            <option value="已完成">已完成</option>
+                            <option value="已规划">已规划</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label style="display:block; font-size:12px; font-weight:600; margin-bottom:3px; color:#2c3e50;">描述</label>
+                    <textarea id="targetDesc" class="form-control" rows="2" placeholder="目标描述..." style="width:100%; padding:6px 10px; border:1px solid #d0d7de; border-radius:4px; font-size:12px; box-sizing:border-box; resize:vertical;"></textarea>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:8px; padding:12px 20px; border-top:1px solid #e1e8ed; background:#f8f9fa; border-radius:0 0 8px 8px; flex-shrink:0;">
+            <button class="btn btn-secondary" onclick="closeTargetModal()" style="padding:6px 20px; border:none; border-radius:4px; cursor:pointer; background:#95a5a6; color:white;">取消</button>
+            <button class="btn btn-primary" onclick="saveTarget()" style="padding:6px 20px; border:none; border-radius:4px; cursor:pointer; background:#3498db; color:white;">保存</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    var currentTargetId = null;
+
+    function loadTargets() {
+        var area = document.getElementById('targetList');
+        area.innerHTML = '<div style="text-align:center; color:#95a5a6; padding:40px 0; font-size:13px;">⏳ 加载中...</div>';
+
+        fetch('/api/reduction/targets')
+        .then(function(response) { return response.json(); })
+        .then(function(result) {
+            if (!result.success) {
+                area.innerHTML = '<div style="text-align:center; color:#e74c3c; padding:20px; font-size:13px;">❌ ' + (result.error || '加载失败') + '</div>';
+                return;
+            }
+
+            var data = result.data || [];
+            var total = data.length;
+            var active = data.filter(function(t) { return t.status === '进行中'; }).length;
+            var completed = data.filter(function(t) { return t.status === '已完成'; }).length;
+
+            document.getElementById('totalTargets').textContent = total;
+            document.getElementById('activeTargets').textContent = active;
+            document.getElementById('completedTargets').textContent = completed;
+
+            area.innerHTML = '';
+            if (data.length === 0) {
+                area.innerHTML = '<div style="text-align:center; color:#95a5a6; padding:40px 0; font-size:13px;">📌 暂无碳减排目标，点击"新增目标"添加</div>';
+                return;
+            }
+
+            data.forEach(function(target) {
+                var card = document.createElement('div');
+                card.className = 'target-card';
+
+                var statusClass = target.status === '进行中' ? 'active' : target.status === '已完成' ? 'completed' : 'pending';
+                var colorMap = {'active': '#2ecc71', 'completed': '#27ae60', 'pending': '#f39c12'};
+                var color = colorMap[statusClass] || '#3498db';
+
+                card.innerHTML = `
+                    <div class="info">
+                        <div class="name">${target.target_name || '未命名目标'}</div>
+                        <div class="detail">${target.target_scope || '范围一+范围二'} | 基准年 ${target.base_year || '-'} → 目标年 ${target.target_year || '-'} | SBT: ${target.sbt_level || '1.5°C'}</div>
+                    </div>
+                    <div class="progress-area">
+                        <span style="font-size:12px; color:#7f8c8d;">${target.reduction_percentage || 0}%</span>
+                        <div class="progress-bar">
+                            <div class="fill" style="width:${target.progress || 0}%; background:${color};"></div>
+                        </div>
+                        <span class="pct" style="color:${color};">${target.progress || 0}%</span>
+                        <span class="status-badge ${statusClass}">${target.status || '进行中'}</span>
+                    </div>
+                    <div class="target-actions">
+                        <button class="btn-edit" onclick="editTarget(${target.id})" title="编辑">✏️</button>
+                        <button class="btn-delete" onclick="deleteTarget(${target.id})" title="删除">🗑️</button>
+                    </div>
+                `;
+                area.appendChild(card);
+            });
+        })
+        .catch(function(e) {
+            area.innerHTML = '<div style="text-align:center; color:#e74c3c; padding:20px; font-size:13px;">❌ 加载失败: ' + e.message + '</div>';
+        });
+    }
+
+    function openTargetModal(target) {
+        var modal = document.getElementById('targetModal');
+        var title = document.getElementById('targetModalTitle');
+        var editId = document.getElementById('editTargetId');
+
+        if (target) {
+            title.textContent = '编辑碳减排目标';
+            editId.value = target.id || '';
+            document.getElementById('targetName').value = target.target_name || '';
+            document.getElementById('targetBaseYear').value = target.base_year || 2025;
+            document.getElementById('targetYear').value = target.target_year || 2035;
+            document.getElementById('targetReduction').value = target.reduction_percentage || 46.2;
+            document.getElementById('targetSbt').value = target.sbt_level || '1.5°C';
+            document.getElementById('targetCurrent').value = target.current_emission || 5000;
+            document.getElementById('targetEmission').value = target.target_emission || 2688;
+            document.getElementById('targetScope').value = target.target_scope || '范围一+范围二';
+            document.getElementById('targetStatus').value = target.status || '进行中';
+            document.getElementById('targetDesc').value = target.description || '';
+        } else {
+            title.textContent = '新增碳减排目标';
+            editId.value = '';
+            document.getElementById('targetName').value = '';
+            document.getElementById('targetBaseYear').value = 2025;
+            document.getElementById('targetYear').value = 2035;
+            document.getElementById('targetReduction').value = 46.2;
+            document.getElementById('targetSbt').value = '1.5°C';
+            document.getElementById('targetCurrent').value = 5000;
+            document.getElementById('targetEmission').value = 2688;
+            document.getElementById('targetScope').value = '范围一+范围二';
+            document.getElementById('targetStatus').value = '进行中';
+            document.getElementById('targetDesc').value = '';
+        }
+        modal.style.display = 'flex';
+    }
+
+    function closeTargetModal() {
+        document.getElementById('targetModal').style.display = 'none';
+    }
+
+    function saveTarget() {
+        var id = document.getElementById('editTargetId').value;
+        var name = document.getElementById('targetName').value.trim();
+        if (!name) { alert('请输入目标名称'); return; }
+
+        var data = {
+            target_name: name,
+            base_year: parseInt(document.getElementById('targetBaseYear').value) || 2025,
+            target_year: parseInt(document.getElementById('targetYear').value) || 2035,
+            reduction_percentage: parseFloat(document.getElementById('targetReduction').value) || 0,
+            sbt_level: document.getElementById('targetSbt').value,
+            current_emission: parseFloat(document.getElementById('targetCurrent').value) || 0,
+            target_emission: parseFloat(document.getElementById('targetEmission').value) || 0,
+            target_scope: document.getElementById('targetScope').value,
+            status: document.getElementById('targetStatus').value,
+            description: document.getElementById('targetDesc').value.trim(),
+            progress: 0
+        };
+
+        var url = id ? '/api/reduction/targets/' + id : '/api/reduction/targets';
+        var method = id ? 'PUT' : 'POST';
+
+        fetch(url, {
+            method: method,
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(result) {
+            if (result.success) {
+                alert(result.message);
+                closeTargetModal();
+                loadTargets();
+            } else {
+                alert('操作失败: ' + (result.error || '未知错误'));
+            }
+        })
+        .catch(function(e) {
+            alert('请求失败: ' + e.message);
+        });
+    }
+
+    function editTarget(id) {
+        fetch('/api/reduction/targets')
+        .then(function(response) { return response.json(); })
+        .then(function(result) {
+            if (result.success) {
+                var target = result.data.find(function(t) { return t.id === id; });
+                if (target) {
+                    openTargetModal(target);
+                } else {
+                    alert('未找到该目标');
+                }
+            }
+        })
+        .catch(function(e) {
+            alert('加载失败: ' + e.message);
+        });
+    }
+
+    function deleteTarget(id) {
+        if (!confirm('确定要删除该碳减排目标吗？')) return;
+        fetch('/api/reduction/targets/' + id, {method: 'DELETE'})
+        .then(function(response) { return response.json(); })
+        .then(function(result) {
+            if (result.success) {
+                alert(result.message);
+                loadTargets();
+            } else {
+                alert('删除失败: ' + (result.error || '未知错误'));
+            }
+        })
+        .catch(function(e) {
+            alert('请求失败: ' + e.message);
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        loadTargets();
+    });
+</script>
+{% endblock %}

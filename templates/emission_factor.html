@@ -1,0 +1,282 @@
+<!-- templates/emission_factor.html -->
+{% extends "base.html" %}
+
+{% block page_title %}排放因子配置{% endblock %}
+
+{% block content %}
+<div class="page-container" style="height:100%; display:flex; flex-direction:column;">
+    <div class="panel" style="flex:1; display:flex; flex-direction:column; min-height:0;">
+        <div class="panel-body" style="flex:1; display:flex; gap:20px; min-height:0; padding:15px;">
+            <!-- 左侧树形结构 -->
+            <div class="tree-section" style="width:280px; flex-shrink:0; display:flex; flex-direction:column; border-right:1px solid #e1e8ed; padding-right:15px; height:100%; overflow:visible;">
+                <div class="tree-header" style="display:flex; justify-content:space-between; align-items:center; padding-bottom:10px; border-bottom:1px solid #e1e8ed; flex-shrink:0;">
+                    <span class="tree-title" style="font-size:14px; font-weight:bold;">📂 排放因子分类</span>
+                    <div>
+                        <button class="btn btn-sm btn-outline" onclick="expandAll()" style="font-size:11px; padding:2px 8px;">展开全部</button>
+                        <button class="btn btn-sm btn-outline" onclick="collapseAll()" style="font-size:11px; padding:2px 8px;">折叠全部</button>
+                    </div>
+                </div>
+                <div class="tree-container" id="treeContainer" style="flex:1; overflow:visible; padding-top:8px; min-height:0;">
+                    <!-- 树由 JavaScript 动态生成 -->
+                </div>
+            </div>
+
+            <!-- 右侧表格 -->
+            <div class="table-section" style="flex:1; display:flex; flex-direction:column; min-height:0;">
+                <!-- 操作按钮 -->
+                <div class="table-toolbar" style="display:flex; justify-content:space-between; align-items:center; padding:0 0 10px 0; flex-shrink:0; flex-wrap:wrap; gap:8px;">
+                    <div class="btn-group">
+                        <button class="btn btn-sm" onclick="selectAll()">全选</button>
+                        <button class="btn btn-sm" onclick="deselectAll()">取消全选</button>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary btn-sm" onclick="addRecord()">
+                            <i class="fas fa-plus"></i> 新增排放因子
+                        </button>
+                        <button class="btn btn-sm" onclick="importData()">
+                            <i class="fas fa-upload"></i> 导入数据
+                        </button>
+                        <button class="btn btn-danger btn-sm" onclick="batchDelete()">
+                            <i class="fas fa-trash"></i> 批量删除
+                        </button>
+                        <button class="btn btn-sm" onclick="exportData()">
+                            <i class="fas fa-download"></i> 导出数据
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 表格 -->
+                <div class="table-wrapper" style="flex:1; overflow:auto; border:1px solid #e1e8ed; border-radius:4px; min-height:0;">
+                    <table class="data-table" id="dataTable" style="width:100%; border-collapse:collapse; font-size:13px;">
+                        <thead style="position:sticky; top:0; z-index:10; background:#f8f9fa;">
+                            <tr>
+                                <th width="30"><input type="checkbox" id="selectAllCheckbox" onchange="toggleAllCheckbox()"></th>
+                                <th width="40">ID</th>
+                                <th width="110">因子类型</th>
+                                <th width="90">类别</th>
+                                <th width="110">子类别</th>
+                                <th width="70">单位</th>
+                                <th width="90">排放因子值</th>
+                                <th width="140">数据来源</th>
+                                <th width="85">生效日期</th>
+                                <th width="60">状态</th>
+                                <th width="100">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                            <!-- 数据由 JavaScript 动态渲染 -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="table-footer" style="display:flex; justify-content:space-between; align-items:center; padding:10px 0 0 0; font-size:13px; color:#7f8c8d; flex-shrink:0;">
+                    <span id="statusLabel">共 0 条记录 | 已选择 0 项</span>
+                    <span id="updateLabel">最后更新: --</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 新增/编辑模态框 -->
+<div class="modal" id="formModal" style="display:none;">
+    <div class="modal-overlay" onclick="closeModal()"></div>
+    <div class="modal-dialog modal-lg">
+        <div class="modal-header">
+            <h3 id="formTitle">新增排放因子</h3>
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+        </div>
+        <div class="modal-body" style="max-height:70vh; overflow-y:auto;">
+            <form id="factorForm">
+                <input type="hidden" id="editId" value="">
+
+                <!-- 因子类型 -->
+                <div class="form-group">
+                    <label>因子类型 <span class="required">*</span></label>
+                    <select id="factorType" class="form-control" onchange="onTypeChange()">
+                        <option value="">请选择因子类型</option>
+                        <option value="化石燃料排放因子">化石燃料排放因子</option>
+                        <option value="电网区域排放因子">电网区域排放因子</option>
+                        <option value="产品碳排放因子">产品碳排放因子</option>
+                        <option value="其他排放因子">其他排放因子</option>
+                    </select>
+                </div>
+
+                <!-- 类别 -->
+                <div class="form-group">
+                    <label>类别 <span class="required">*</span></label>
+                    <select id="category" class="form-control" onchange="onCategoryChange()">
+                        <option value="">请先选择因子类型</option>
+                    </select>
+                </div>
+
+                <!-- 子类别 -->
+                <div class="form-group">
+                    <label>子类别 <span class="required">*</span></label>
+                    <select id="subcategory" class="form-control" onchange="onSubcategoryChange()">
+                        <option value="">请先选择类别</option>
+                    </select>
+                </div>
+
+                <!-- 单位 -->
+                <div class="form-group">
+                    <label>单位 <span class="required">*</span></label>
+                    <select id="unit" class="form-control">
+                        <option value="">请选择单位</option>
+                        <option value="t">t</option>
+                        <option value="kg">kg</option>
+                        <option value="tCO2/t">tCO2/t</option>
+                        <option value="tCO2/MWh">tCO2/MWh</option>
+                        <option value="kgCO2/kWh">kgCO2/kWh</option>
+                        <option value="tCO2/GJ">tCO2/GJ</option>
+                        <option value="tCO2/件">tCO2/件</option>
+                        <option value="tCO2/台">tCO2/台</option>
+                        <option value="tCO2/辆">tCO2/辆</option>
+                        <option value="kgCO2/人公里">kgCO2/人公里</option>
+                        <option value="kgCO2/吨公里">kgCO2/吨公里</option>
+                        <option value="10^4Nm^3">10^4Nm³</option>
+                    </select>
+                </div>
+
+                <!-- 排放因子值 -->
+                <div class="form-group">
+                    <label>排放因子值 <span class="required">*</span></label>
+                    <input type="number" step="0.0001" id="factorValue" class="form-control" placeholder="请输入排放因子值">
+                </div>
+
+                <!-- 数据来源 -->
+                <div class="form-group">
+                    <label>数据来源</label>
+                    <input type="text" id="dataSource" class="form-control" placeholder="请输入数据来源">
+                </div>
+
+                <!-- 生效日期 -->
+                <div class="form-group">
+                    <label>生效日期</label>
+                    <input type="date" id="effectiveDate" class="form-control">
+                </div>
+
+                <!-- 状态 -->
+                <div class="form-group">
+                    <label>状态</label>
+                    <select id="status" class="form-control">
+                        <option value="启用">启用</option>
+                        <option value="历史">历史</option>
+                    </select>
+                </div>
+
+                <!-- 燃料特定字段 -->
+                <div id="fuelFields" style="display:none; border-top:1px solid #e1e8ed; padding-top:15px; margin-top:10px;">
+                    <h4 style="font-size:13px; color:#2c3e50; margin-bottom:10px;">🔥 燃料参数</h4>
+                    <div class="form-group">
+                        <label>低位发热值 (GJ/t)</label>
+                        <input type="number" step="0.01" id="calorificValue" class="form-control" placeholder="请输入低位发热值">
+                    </div>
+                    <div class="form-group">
+                        <label>单位热值含碳量 (tC/GJ)</label>
+                        <input type="text" id="carbonContent" class="form-control" placeholder="请输入单位热值含碳量，如：27.49×10^-3">
+                    </div>
+                    <div class="form-group">
+                        <label>碳氧化率</label>
+                        <input type="text" id="oxidationRate" class="form-control" placeholder="请输入碳氧化率，如：94%">
+                    </div>
+                </div>
+
+                <!-- 电网特定字段 -->
+                <div id="gridFields" style="display:none; border-top:1px solid #e1e8ed; padding-top:15px; margin-top:10px;">
+                    <h4 style="font-size:13px; color:#2c3e50; margin-bottom:10px;">⚡ 电网参数</h4>
+                    <div class="form-group">
+                        <label>区域</label>
+                        <select id="region" class="form-control">
+                            <option value="">请选择区域</option>
+                            <option value="全国">全国</option>
+                            <option value="华北">华北</option>
+                            <option value="东北">东北</option>
+                            <option value="华东">华东</option>
+                            <option value="华中">华中</option>
+                            <option value="西北">西北</option>
+                            <option value="南方">南方</option>
+                            <option value="西南">西南</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>覆盖范围</label>
+                        <textarea id="coverage" class="form-control" rows="2" placeholder="请输入覆盖范围，如：北京、天津、河北..."></textarea>
+                    </div>
+                </div>
+
+                <!-- 产品特定字段 -->
+                <div id="productFields" style="display:none; border-top:1px solid #e1e8ed; padding-top:15px; margin-top:10px;">
+                    <h4 style="font-size:13px; color:#2c3e50; margin-bottom:10px;">📦 产品参数</h4>
+                    <div class="form-group">
+                        <label>产品类型</label>
+                        <select id="productType" class="form-control">
+                            <option value="">请选择产品类型</option>
+                            <option value="道岔">道岔</option>
+                            <option value="电缆">电缆</option>
+                            <option value="受电弓">受电弓</option>
+                            <option value="空调">空调</option>
+                            <option value="照明灯具">照明灯具</option>
+                            <option value="电脑">电脑</option>
+                            <option value="公务车">公务车</option>
+                            <option value="客运服务">客运服务</option>
+                            <option value="货运服务">货运服务</option>
+                            <option value="废物处理">废物处理</option>
+                        </select>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn" onclick="closeModal()">取消</button>
+            <button class="btn btn-primary" onclick="saveRecord()">保存</button>
+        </div>
+    </div>
+</div>
+
+<!-- 选项数据 -->
+{% raw %}
+<script id="optionsData" type="application/json">
+{
+    "category_options": {
+        "化石燃料排放因子": ["固体燃料", "液体燃料", "气体燃料"],
+        "电网区域排放因子": ["全国电力", "区域电力"],
+        "产品碳排放因子": ["运输服务", "装备产品", "办公用品"],
+        "其他排放因子": ["热力供应"]
+    },
+    "subcategory_options": {
+        "化石燃料排放因子": {
+            "固体燃料": ["无烟煤", "烟煤", "褐煤", "洗精煤", "煤制品", "焦炭"],
+            "液体燃料": ["燃料油", "柴油", "汽油", "煤油"],
+            "气体燃料": ["焦炉煤气", "城市煤气", "油田天然气", "气田天然气", "液化石油气", "液化天然气"]
+        },
+        "电网区域排放因子": {
+            "全国电力": ["全国电力平均"],
+            "区域电力": ["华北区域", "东北区域", "华东区域", "华中区域", "西北区域", "南方区域", "西南区域"]
+        },
+        "产品碳排放因子": {
+            "运输服务": ["旅客运输", "货物运输", "废物循环"],
+            "装备产品": ["铁路专用产品", "铁路通用产品"],
+            "办公用品": ["电子设备", "车辆"]
+        }
+    },
+    "unit_options": {
+        "固体燃料": ["t"],
+        "液体燃料": ["t"],
+        "气体燃料": ["10^4Nm^3"],
+        "全国电力": ["tCO2/MWh"],
+        "区域电力": ["kgCO2/kWh"],
+        "运输服务": ["kgCO2/人公里", "kgCO2/吨公里"],
+        "装备产品": ["tCO2/件", "tCO2/公里", "tCO2/套", "tCO2/台"],
+        "办公用品": ["tCO2/台", "tCO2/辆"],
+        "热力供应": ["tCO2/GJ"]
+    },
+    "fuel_fields": ["化石燃料排放因子"],
+    "grid_fields": ["电网区域排放因子"],
+    "product_fields": ["产品碳排放因子"]
+}
+</script>
+{% endraw %}
+
+<script src="{{ url_for('static', filename='js/emission_factor.js') }}"></script>
+{% endblock %}
